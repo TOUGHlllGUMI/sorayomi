@@ -1,6 +1,6 @@
 // 自分のファイルだけを「ネットワーク優先・失敗したらキャッシュ」で扱う。
 // 天気のAPIはキャッシュしない(前回の天気はアプリ側で保存している)。
-const CACHE_NAME = "sorayomi-v2";
+const CACHE_NAME = "sorayomi-v3";
 const ASSETS = [
   "./",
   "./index.html",
