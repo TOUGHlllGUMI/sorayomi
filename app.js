@@ -565,9 +565,6 @@
   function renderWeek(d) {
     const dl = d.daily;
     const n = Math.min(7, dl.time.length);
-    const lo = Math.min(...dl.temperature_2m_min.slice(0, n));
-    const hi = Math.max(...dl.temperature_2m_max.slice(0, n));
-    const span = Math.max(1, hi - lo);
     const rows = [];
     for (let i = 0; i < n; i++) {
       const dt = dateOf(dl.time[i]);
@@ -575,17 +572,15 @@
       const min = dl.temperature_2m_min[i];
       const max = dl.temperature_2m_max[i];
       const pop = dl.precipitation_probability_max[i] ?? 0;
-      const left = ((min - lo) / span) * 100;
-      const width = Math.max(4, ((max - min) / span) * 100);
       rows.push(`
         <li class="day">
           <span class="day-name">${name}<small>${dt.getMonth() + 1}/${dt.getDate()}</small></span>
           <img src="${iconSrc(iconOf(dl.weather_code[i], true))}" alt="${esc(labelOf(dl.weather_code[i]))}" title="${esc(labelOf(dl.weather_code[i]))}">
           <span class="day-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
           <span class="day-range">
-            <span class="day-min">${r0(min)}℃</span>
-            <span class="bar"><i style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></i></span>
             <span class="day-max">${r0(max)}℃</span>
+            <span class="day-sep">/</span>
+            <span class="day-min">${r0(min)}℃</span>
           </span>
         </li>`);
     }

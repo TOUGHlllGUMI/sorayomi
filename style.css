@@ -147,6 +147,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
   gap: 8px;
   margin-bottom: 12px;
 }
+.sec-note { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
 .sec-head h2 {
   margin: 0;
   font-size: 11.5px;
@@ -248,16 +249,15 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .day-pop { font-size: 12.5px; color: var(--rain); text-align: center; }
 .day-pop.dim { color: var(--ink-3); }
 .day-range {
-  display: grid;
-  grid-template-columns: 2.9em minmax(0, 1fr) 2.9em;
-  align-items: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
   gap: 8px;
   font-size: 15px;
 }
-.day-min { color: var(--ink-2); text-align: right; }
-.day-max { font-weight: 700; }
-.bar { height: 3px; background: var(--rule); position: relative; }
-.bar i { position: absolute; top: 0; bottom: 0; background: var(--ink); }
+.day-max { min-width: 2.9em; text-align: right; font-size: 16px; font-weight: 700; }
+.day-sep { color: var(--ink-3); }
+.day-min { min-width: 2.9em; text-align: right; color: var(--ink-2); }
 
 /* 自信度 */
 .conf-list { list-style: none; margin: 0; padding: 0; }
