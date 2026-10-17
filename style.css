@@ -220,6 +220,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .hour.now-hour .hour-time { color: var(--ink); font-weight: 700; }
 .hour-pop { margin-top: 2px; font-size: 11.5px; color: var(--rain); }
 .hour-pop.dim { color: var(--ink-3); }
+.hour-snow { font-size: 11px; font-weight: 700; color: #3f8fbf; }
 .hour.newday { box-shadow: inset 1px 0 0 var(--rule); }
 .hour.newday::before {
   content: attr(data-day);
@@ -248,6 +249,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .day img { width: 36px; height: 36px; }
 .day-pop { font-size: 12.5px; color: var(--rain); text-align: center; }
 .day-pop.dim { color: var(--ink-3); }
+.day-pop small { display: block; font-size: 10.5px; font-weight: 700; color: #3f8fbf; }
 .day-range {
   display: flex;
   align-items: baseline;

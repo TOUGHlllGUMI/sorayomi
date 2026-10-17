@@ -35,6 +35,8 @@
   const kindOf = (code) => (WMO[code] || [null, 'na'])[1];
   const labelOf = (code) => (WMO[code] || ['--'])[0];
   const RAINY = new Set(['drizzle', 'sleet', 'rain', 'showers', 'thunder', 'thunderrain']);
+  const SNOWY = new Set(['snow', 'snowshowers']);
+  const FALLING = new Set([...RAINY, ...SNOWY]);  // 雨でも雪でも「降っている」
 
   function iconOf(code, isDay = true) {
     const dn = isDay ? 'day' : 'night';
@@ -72,6 +74,8 @@
   const DIRS = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
   const dirName = (deg) => DIRS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
   const hourOf = (iso) => Number(iso.slice(11, 13));
+  // 雪の量: 1cm未満は小数1けた、それ以上は整数
+  const cm = (v, unit = 'cm') => `${v < 1 ? v.toFixed(1) : Math.round(v)}${unit}`;
   const hm = (iso) => `${hourOf(iso)}:${iso.slice(14, 16)}`;
   function dateOf(isoDate) {
     const [y, m, d] = isoDate.split('-').map(Number);
@@ -104,8 +108,8 @@
       forecast_days: '8',
       wind_speed_unit: 'ms',
       current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day',
-      hourly: 'temperature_2m,weather_code,precipitation_probability,is_day',
-      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,wind_speed_10m_max',
+      hourly: 'temperature_2m,weather_code,precipitation_probability,is_day,snowfall,snow_depth',
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,wind_speed_10m_max,snowfall_sum',
     });
     const res = await fetch('https://api.open-meteo.com/v1/forecast?' + p);
     if (!res.ok) throw new Error('weather ' + res.status);
@@ -421,7 +425,8 @@
         : c.rainYes === c.n ? `${c.n}つとも降る`
         : `${c.n}つ中${c.rainYes}つが降る`;
       const tempText = c.maxLo === c.maxHi ? `${c.maxHi}℃` : `${c.maxLo}〜${c.maxHi}℃`;
-      const parts = [`雨: ${rainText}`, `最高 ${tempText}`];
+      const snowDay = SNOWY.has(kindOf(d.daily.weather_code[i])) || (d.daily.snowfall_sum?.[i] ?? 0) >= 0.5;
+      const parts = [`${snowDay ? '雪' : '雨'}: ${rainText}`, `最高 ${tempText}`];
       if (c.n < c.total) parts.push(`予報は${c.n}つだけ`);
       rows.push(`
         <li class="conf-row${c.pct < LOW_CONF ? ' low' : ''}">
@@ -461,33 +466,40 @@
       to = Math.min(start + 12, h.time.length - 1);
     }
     let maxPop = 0;
-    let firstRain = -1;
+    let firstFall = -1;
+    let snowyHours = 0;
+    let snowCm = 0;
+    let minT = Infinity;
+    let minAt = from;
     for (let i = from; i <= to; i++) {
       const pop = h.precipitation_probability[i] ?? 0;
+      const k = kindOf(h.weather_code[i]);
       maxPop = Math.max(maxPop, pop);
-      if (firstRain < 0 && (pop >= 50 || RAINY.has(kindOf(h.weather_code[i])) && pop >= 30)) firstRain = i;
+      if (firstFall < 0 && (pop >= 50 || FALLING.has(k) && pop >= 30)) firstFall = i;
+      if (SNOWY.has(k)) snowyHours++;
+      snowCm += h.snowfall?.[i] ?? 0;
+      if (h.temperature_2m[i] < minT) { minT = h.temperature_2m[i]; minAt = i; }
     }
-    const snowy = (() => {
-      for (let i = from; i <= to; i++) {
-        const k = kindOf(h.weather_code[i]);
-        if (k === 'snow' || k === 'snowshowers') return true;
-      }
-      return false;
-    })();
-    const rainingNow = !forTomorrow && RAINY.has(kindOf(d.current.weather_code));
+    const nowKind = kindOf(d.current.weather_code);
+    const fallingNow = !forTomorrow && FALLING.has(nowKind);
+    // いま降っているものを優先。降っていなければ、この時間帯に雪の時間や降雪があるかで決める
+    const snowy = fallingNow ? SNOWY.has(nowKind) : snowyHours > 0 || snowCm >= 0.5;
     const fall = snowy ? '雪' : '雨';
+    const depthCm = forTomorrow ? 0 : (h.snow_depth?.[start] ?? 0) * 100;
+    // 降りはじめが「いま」の時間なら、時刻ではなく「まもなく」と言う
+    const when = (i) => (!forTomorrow && i === start ? 'まもなく' : `${hourOf(h.time[i])}時ごろから`);
 
     let umbTitle, umbBody;
-    if (rainingNow) {
+    if (fallingNow) {
       umbTitle = '傘を持っていこう';
       umbBody = `いま${fall}が降っています。`;
     } else if (maxPop >= 60) {
       umbTitle = '傘を持っていこう';
-      umbBody = firstRain >= 0 ? `${hourOf(h.time[firstRain])}時ごろから${fall}になりそう(降水確率 ${maxPop}%)。` : `降水確率 ${maxPop}%。`;
+      umbBody = firstFall >= 0 ? `${when(firstFall)}${fall}になりそう(降水確率 ${maxPop}%)。` : `降水確率 ${maxPop}%。`;
     } else if (maxPop >= 30) {
       umbTitle = '折りたたみ傘があると安心';
-      umbBody = firstRain >= 0
-        ? `${hourOf(h.time[firstRain])}時ごろに${fall}が降るかも(降水確率 ${maxPop}%)。`
+      umbBody = firstFall >= 0
+        ? `${when(firstFall)}${fall}が降るかも(降水確率 ${maxPop}%)。`
         : `ところにより${fall}が降るかも(降水確率 ${maxPop}%)。`;
     } else {
       umbTitle = '傘はいらなさそう';
@@ -519,9 +531,32 @@
     $('#adviceTitle').textContent = forTomorrow ? '明日のひとこと' : '今日のひとこと';
     $('#adviceConf').innerHTML = conf
       ? `<span class="conf-chip${conf.pct < LOW_CONF ? ' low' : ''}">自信度 ${conf.pct}%</span>` : '';
-    $('#advice').innerHTML = `
-      <div class="tip"><div><div class="tip-title">${esc(umbTitle)}</div><div class="tip-body">${esc(umbBody)}</div></div></div>
-      <div class="tip"><div><div class="tip-title">${esc(clothTitle)}</div><div class="tip-body">${esc(notes.join(''))}</div></div></div>`;
+    const tips = [[umbTitle, umbBody]];
+
+    // 雪の量
+    if (snowCm >= 0.5) {
+      const deep = snowCm >= 5;
+      tips.push([
+        deep ? `雪が ${cm(snowCm)} くらい積もりそう` : `雪が ${cm(snowCm)} くらい降りそう`,
+        (depthCm >= 1 ? `いま ${cm(depthCm)} 積もっています。` : '')
+          + (deep ? 'すべりにくい靴で。電車やバスがおくれるかも。' : 'すべりにくい靴がおすすめ。'),
+      ]);
+    } else if (depthCm >= 1) {
+      tips.push(['雪が積もっています', `いま ${cm(depthCm)}。足もとに気をつけて。`]);
+    }
+
+    // 道の凍結: 0℃以下まで下がるとき、または1℃以下で雨や雪・積雪があるとき
+    const wet = fallingNow || maxPop >= 30 || snowCm > 0 || depthCm >= 1;
+    if (minT <= 0 || (minT <= 1 && wet)) {
+      tips.push([
+        minT <= -2 ? '道がこおりそう' : '道がこおるかも',
+        `${hourOf(h.time[minAt])}時ごろ ${r0(minT)}℃ まで下がります。橋の上や日かげはとくにすべりやすいので、歩くときも自転車も気をつけて。`,
+      ]);
+    }
+
+    tips.push([clothTitle, notes.join('')]);
+    $('#advice').innerHTML = tips.map(([t, b]) =>
+      `<div class="tip"><div><div class="tip-title">${esc(t)}</div><div class="tip-body">${esc(b)}</div></div></div>`).join('');
   }
 
   function renderHourly(d, start) {
@@ -541,6 +576,7 @@
           <img src="${iconSrc(iconOf(h.weather_code[i], h.is_day[i] === 1))}" alt="${esc(labelOf(h.weather_code[i]))}" loading="lazy">
           <span class="hour-time">${isNow ? '今' : hr + '時'}</span>
           <span class="hour-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
+          ${(h.snowfall?.[i] ?? 0) >= 0.1 ? `<span class="hour-snow">雪${cm(h.snowfall[i])}</span>` : ''}
         </div>`);
     }
 
@@ -576,7 +612,7 @@
         <li class="day">
           <span class="day-name">${name}<small>${dt.getMonth() + 1}/${dt.getDate()}</small></span>
           <img src="${iconSrc(iconOf(dl.weather_code[i], true))}" alt="${esc(labelOf(dl.weather_code[i]))}" title="${esc(labelOf(dl.weather_code[i]))}">
-          <span class="day-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
+          <span class="day-pop${pop < 20 ? ' dim' : ''}">${pop}%${(dl.snowfall_sum?.[i] ?? 0) >= 0.5 ? `<small>雪${cm(dl.snowfall_sum[i])}</small>` : ''}</span>
           <span class="day-range">
             <span class="day-max">${r0(max)}℃</span>
             <span class="day-sep">/</span>
@@ -606,6 +642,15 @@
       { icon: 'sunrise', head: '日の出', value: hm(dl.sunrise[0]), note: `明日 ${hm(dl.sunrise[1])}` },
       { icon: 'sunset', head: '日の入り', value: hm(dl.sunset[0]), note: `明日 ${hm(dl.sunset[1])}` },
     ];
+    // 雪が積もっている、または今日降るときだけ、雪の数値を2つ足す
+    const depthCm = (d.hourly.snow_depth?.[hourIndex(d)] ?? 0) * 100;
+    const todaySnow = dl.snowfall_sum?.[0] ?? 0;
+    if (depthCm >= 1 || todaySnow >= 0.5) {
+      tiles.push(
+        { icon: 'snow', head: '積雪', value: cm(depthCm, '<small>cm</small>'), note: 'いま積もっている雪' },
+        { icon: 'snowflake', head: '降雪(今日)', value: cm(todaySnow, '<small>cm</small>'), note: '今日あらたに降る雪' },
+      );
+    }
     $('#details').innerHTML = tiles.map((t) => `
       <div class="tile">
         <div class="tile-head"><img src="${iconSrc(t.icon)}" alt="">${t.head}</div>
