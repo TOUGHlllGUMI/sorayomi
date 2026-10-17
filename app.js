@@ -187,7 +187,7 @@
   function showPlace(p) {
     $('#placeName').textContent = p.name;
     $('#placeSub').textContent = subText(p);
-    document.title = `${p.name}の天気 - そらよみ`;
+    document.title = `${p.name}の天気 - のち`;
     updateFavBtn();
   }
 

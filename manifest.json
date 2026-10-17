@@ -1,6 +1,6 @@
 {
-  "name": "そらよみ",
-  "short_name": "そらよみ",
+  "name": "のち",
+  "short_name": "のち",
   "description": "今日の1時間ごと・1週間の天気と、傘や服装のひとこと",
   "lang": "ja",
   "start_url": "./index.html",
