@@ -86,21 +86,6 @@
     return '極端に強い';
   }
 
-  // 気温 → 色(バーの色)
-  const TEMP_STOPS = [[-5, [142, 197, 255]], [8, [126, 224, 214]], [18, [190, 230, 120]], [25, [255, 211, 110]], [33, [255, 128, 88]]];
-  function tempColor(t) {
-    if (t <= TEMP_STOPS[0][0]) return `rgb(${TEMP_STOPS[0][1]})`;
-    for (let i = 1; i < TEMP_STOPS.length; i++) {
-      const [t1, c1] = TEMP_STOPS[i];
-      if (t <= t1) {
-        const [t0, c0] = TEMP_STOPS[i - 1];
-        const f = (t - t0) / (t1 - t0);
-        return `rgb(${c0.map((v, j) => r0(v + (c1[j] - v) * f)).join(',')})`;
-      }
-    }
-    return `rgb(${TEMP_STOPS[TEMP_STOPS.length - 1][1]})`;
-  }
-
   let toastTimer = 0;
   function toast(msg) {
     const el = $('#toast');
@@ -285,8 +270,13 @@
     const isDay = c.is_day === 1;
 
     document.documentElement.dataset.theme = themeOf(c.weather_code, isDay);
-    const sky = getComputedStyle(document.documentElement).getPropertyValue('--sky-a').trim();
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', sky);
+    // 場所の下に、その土地の日時を出す
+    if (place) {
+      const t = d.current.time;
+      const dt = dateOf(t.slice(0, 10));
+      const when = `${dt.getMonth() + 1}月${dt.getDate()}日(${WEEK[dt.getDay()]}) ${hm(t)}`;
+      $('#placeSub').textContent = [subText(place), when].filter(Boolean).join(' ・ ');
+    }
 
     // いま
     $('#nowIcon').src = iconSrc(iconOf(c.weather_code, isDay));
@@ -307,7 +297,8 @@
   }
 
   function renderError() {
-    $('#advice').innerHTML = `<div class="tip"><img src="${iconSrc('not-available')}" alt=""><div><div class="tip-title">天気を読みこめませんでした</div><div class="tip-body">通信を確かめて、右上の更新ボタンを押してください。</div></div></div>`;
+    $('#adviceConf').innerHTML = '';
+    $('#advice').innerHTML = `<div class="tip"><div><div class="tip-title">天気を読みこめませんでした</div><div class="tip-body">通信を確かめて、右上の更新ボタンを押してください。</div></div></div>`;
   }
 
   // 1時間ごとの配列で「いま」の位置
@@ -368,8 +359,8 @@
     };
   }
 
-  // 自信度 → 色(低いとオレンジ、高いと緑)
-  const confColor = (pct) => `hsl(${r0(20 + Math.max(0, pct - 40) * 1.9)}, 85%, 68%)`;
+  // これより低い自信度は、色を変えて目立たせる
+  const LOW_CONF = 60;
 
   function renderConfidence(d, multi) {
     const el = $('#conf');
@@ -386,11 +377,11 @@
       const parts = [`雨: ${rainText}`, `最高 ${tempText}`];
       if (c.n < c.total) parts.push(`予報は${c.n}つだけ`);
       rows.push(`
-        <li class="conf-row">
+        <li class="conf-row${c.pct < LOW_CONF ? ' low' : ''}">
           <span class="day-name">${name}<small>${dt.getMonth() + 1}/${dt.getDate()}</small></span>
-          <span class="conf-pct" style="color:${confColor(c.pct)}">${c.pct}<small>%</small></span>
+          <span class="conf-pct">${c.pct}<small>%</small></span>
           <span class="conf-body">
-            <span class="conf-bar"><i style="width:${c.pct}%;background:${confColor(c.pct)}"></i></span>
+            <span class="conf-bar"><i style="width:${c.pct}%"></i></span>
             <span class="conf-detail">${parts.map((t) => `<span>${t}</span>`).join(' ・ ')}</span>
           </span>
         </li>`);
@@ -478,17 +469,12 @@
       else notes.push(`日中は ${r0(max)}° くらい。`);
     }
 
-    const umbIcon = maxPop >= 30 || rainingNow ? 'umbrella' : 'clear-day';
+    $('#adviceTitle').textContent = forTomorrow ? '明日のひとこと' : '今日のひとこと';
+    $('#adviceConf').innerHTML = conf
+      ? `<span class="conf-chip${conf.pct < LOW_CONF ? ' low' : ''}">自信度 ${conf.pct}%</span>` : '';
     $('#advice').innerHTML = `
-      <div class="advice-when">${forTomorrow ? '明日のひとこと' : '今日のひとこと'}${conf ? `<span class="conf-chip" style="--c:${confColor(conf.pct)}">自信度 ${conf.pct}%</span>` : ''}</div>
-      <div class="tip">
-        <img src="${iconSrc(umbIcon)}" alt="">
-        <div><div class="tip-title">${esc(umbTitle)}</div><div class="tip-body">${esc(umbBody)}</div></div>
-      </div>
-      <div class="tip">
-        <img src="${iconSrc('thermometer')}" alt="">
-        <div><div class="tip-title">${esc(clothTitle)}</div><div class="tip-body">${esc(notes.join(''))}</div></div>
-      </div>`;
+      <div class="tip"><div><div class="tip-title">${esc(umbTitle)}</div><div class="tip-body">${esc(umbBody)}</div></div></div>
+      <div class="tip"><div><div class="tip-title">${esc(clothTitle)}</div><div class="tip-body">${esc(notes.join(''))}</div></div></div>`;
   }
 
   function renderHourly(d, start) {
@@ -504,14 +490,28 @@
       const dayTag = day === d.daily.time[1] ? '明日' : `${dateOf(day).getDate()}日`;
       parts.push(`
         <div class="hour${isNow ? ' now-hour' : ''}${newDay ? ' newday' : ''}"${newDay ? ` data-day="${dayTag}"` : ''}>
-          <span class="hour-time">${isNow ? '今' : hr + '時'}</span>
-          <img src="${iconSrc(iconOf(h.weather_code[i], h.is_day[i] === 1))}" alt="${esc(labelOf(h.weather_code[i]))}" loading="lazy">
           <span class="hour-temp">${r0(h.temperature_2m[i])}°</span>
+          <img src="${iconSrc(iconOf(h.weather_code[i], h.is_day[i] === 1))}" alt="${esc(labelOf(h.weather_code[i]))}" loading="lazy">
+          <span class="hour-time">${isNow ? '今' : hr + '時'}</span>
           <span class="hour-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
         </div>`);
     }
+
+    // 気温の折れ線(列の真ん中に点を置く)
+    const COL = 50;
+    const H = 34;
+    const temps = h.temperature_2m.slice(start, end);
+    const lo = Math.min(...temps);
+    const span = Math.max(1, Math.max(...temps) - lo);
+    const pts = temps.map((t, k) => [k * COL + COL / 2, 4 + (1 - (t - lo) / span) * (H - 8)]);
+    const w = temps.length * COL;
+    const chart = `
+      <svg class="hourly-chart" width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" aria-hidden="true">
+        <polyline points="${pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}"/>
+        ${pts.map((p, k) => `<circle${k === 0 ? ' class="now-pt"' : ''} cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${k === 0 ? 3.2 : 2}"/>`).join('')}
+      </svg>`;
     const el = $('#hourly');
-    el.innerHTML = parts.join('');
+    el.innerHTML = `${chart}<div class="hours">${parts.join('')}</div>`;
     el.scrollLeft = 0;
   }
 
@@ -537,7 +537,7 @@
           <span class="day-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
           <span class="day-range">
             <span class="day-min">${r0(min)}°</span>
-            <span class="bar"><i style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:linear-gradient(90deg,${tempColor(min)},${tempColor(max)})"></i></span>
+            <span class="bar"><i style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></i></span>
             <span class="day-max">${r0(max)}°</span>
           </span>
         </li>`);
@@ -565,7 +565,7 @@
       { icon: 'sunset', head: '日の入り', value: hm(dl.sunset[0]), note: `明日 ${hm(dl.sunset[1])}` },
     ];
     $('#details').innerHTML = tiles.map((t) => `
-      <div class="card tile">
+      <div class="tile">
         <div class="tile-head"><img src="${iconSrc(t.icon)}" alt="">${t.head}</div>
         <div class="tile-value">${t.value}</div>
         <div class="tile-note">${esc(t.note)}</div>

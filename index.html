@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>そらよみ</title>
 <meta name="description" content="今日の1時間ごと・1週間の天気と、傘や服装のひとこと">
-<meta name="theme-color" content="#2f80ed">
+<meta name="theme-color" content="#f5f4f0">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -15,8 +15,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="loading">
-<div class="sky" aria-hidden="true"></div>
-
 <main class="app">
   <header class="top">
     <button class="place-btn" id="placeBtn" type="button" title="場所を変える">
@@ -34,32 +32,38 @@
   </header>
 
   <section class="now" aria-live="polite">
-    <img class="now-icon" id="nowIcon" src="icons/weather/not-available.svg" alt="">
-    <div class="now-main">
+    <div class="now-row">
       <div class="now-temp"><span id="nowTemp">--</span><span class="deg">°</span></div>
-      <div class="now-label" id="nowLabel">&nbsp;</div>
-      <div class="now-range" id="nowRange">&nbsp;</div>
+      <img class="now-icon" id="nowIcon" src="icons/weather/not-available.svg" alt="">
     </div>
+    <div class="now-label" id="nowLabel">&nbsp;</div>
+    <div class="now-range" id="nowRange">&nbsp;</div>
   </section>
 
-  <section class="card advice" id="advice" aria-label="ひとこと"></section>
+  <section class="sec advice-sec">
+    <div class="sec-head"><h2 id="adviceTitle">今日のひとこと</h2><span id="adviceConf"></span></div>
+    <div class="advice" id="advice"></div>
+  </section>
 
-  <section class="card hourly-card">
-    <h2>1時間ごと</h2>
+  <section class="sec hourly-sec">
+    <div class="sec-head"><h2>1時間ごと</h2></div>
     <div class="hourly" id="hourly"></div>
   </section>
 
-  <section class="card week-card">
-    <h2>1週間</h2>
+  <section class="sec week-sec">
+    <div class="sec-head"><h2>1週間</h2></div>
     <ol class="week" id="week"></ol>
   </section>
 
-  <section class="card conf-card">
-    <h2>予報の自信度</h2>
+  <section class="sec conf-sec">
+    <div class="sec-head"><h2>予報の自信度</h2></div>
     <div id="conf"></div>
   </section>
 
-  <section class="details" id="details" aria-label="くわしい数値"></section>
+  <section class="sec details-sec">
+    <div class="sec-head"><h2>くわしい数値</h2></div>
+    <div class="details" id="details"></div>
+  </section>
 
   <footer class="foot">
     <span id="updated"></span>
