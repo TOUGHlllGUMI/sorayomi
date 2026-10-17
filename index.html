@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="loading">
@@ -45,6 +46,11 @@
     <div class="advice" id="advice"></div>
   </section>
 
+  <section class="sec map-sec" id="mapSec">
+    <div class="sec-head"><h2>地図</h2><a class="map-link" id="mapLink" href="#" target="_blank" rel="noopener">大きな地図で開く</a></div>
+    <div class="map" id="map" role="img" aria-label="場所の地図"></div>
+  </section>
+
   <section class="sec hourly-sec">
     <div class="sec-head"><h2>1時間ごと</h2></div>
     <div class="hourly" id="hourly"></div>
@@ -69,6 +75,7 @@
     <span id="updated"></span>
     <span>天気データ <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></span>
     <span>アイコン <a href="https://github.com/basmilius/weather-icons" target="_blank" rel="noopener">Meteocons</a></span>
+    <span>地図 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
   </footer>
 </main>
 
@@ -88,6 +95,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -178,6 +178,20 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .tip-title { font-size: 15.5px; font-weight: 700; line-height: 1.5; }
 .tip-body { margin-top: 1px; font-size: 13px; color: var(--ink-2); line-height: 1.6; }
 
+/* 地図 */
+.map-link { font-size: 12px; font-weight: 700; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--ink); }
+.map {
+  height: 220px;
+  border: 1px solid var(--rule);
+  background: #f2f1ec;
+  font-family: var(--font);
+}
+.map .leaflet-tile-pane { filter: grayscale(1) contrast(0.92) brightness(1.04); }
+.map .leaflet-control-zoom { border: 1px solid var(--rule); box-shadow: none; border-radius: 0; }
+.map .leaflet-control-zoom a { color: var(--ink); border-radius: 0 !important; }
+.map .leaflet-control-attribution { font-size: 10px; background: rgba(245, 244, 240, 0.85); color: var(--ink-2); }
+.map .leaflet-control-attribution a { color: var(--ink-2); }
+
 /* 1時間ごと */
 .hourly {
   margin: 0 -22px;
@@ -394,8 +408,9 @@ body.loading .app > :not(.top) { opacity: 0.45; }
     grid-template-areas:
       "top top"
       "now now"
-      "advice week"
+      "advice map"
       "hourly week"
+      "details week"
       "details conf"
       "foot foot";
     column-gap: 48px;
@@ -408,6 +423,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
   .hourly-sec { grid-area: hourly; }
   .week-sec { grid-area: week; }
   .conf-sec { grid-area: conf; }
+  .map-sec { grid-area: map; }
   .details-sec { grid-area: details; }
   .foot { grid-area: foot; }
   .hourly { margin: 0; padding-left: 0; padding-right: 0; }

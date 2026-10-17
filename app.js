@@ -213,11 +213,36 @@
     updateFavBtn();
   }
 
+  // ---------- 地図 ----------
+  let map = null;
+  let marker = null;
+
+  function showMap(p) {
+    // 地図の部品(Leaflet)を読みこめなかったときは、地図の欄ごと出さない
+    if (!window.L) { $('#mapSec').hidden = true; return; }
+    const at = [p.lat, p.lon];
+    if (!map) {
+      map = L.map('map', { scrollWheelZoom: false, zoomSnap: 0.5 });
+      map.attributionControl.setPrefix(false);
+      // 地図の絵は OpenStreetMap(登録不要)。白・ミニマルに合わせて CSS で灰色にしている
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+      }).addTo(map);
+      marker = L.circleMarker(at, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#16181d', fillOpacity: 1 }).addTo(map);
+    }
+    // 現在地はまわりの道まで、検索した町は町全体が見える大きさ
+    map.setView(at, p.gps ? 14 : 12, { animate: false });
+    marker.setLatLng(at);
+    $('#mapLink').href = `https://www.google.com/maps/search/?api=1&query=${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+  }
+
   async function load(p, { quiet = false } = {}) {
     const seq = ++loadSeq;
     place = p;
     store.set('place', p);
     showPlace(p);
+    showMap(p);
 
     const cache = store.get('cache', {});
     const hit = cache[placeKey(p)];
