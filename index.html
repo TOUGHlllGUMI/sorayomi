@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja" data-theme="sunny">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>そらよみ</title>
+<meta name="description" content="今日の1時間ごと・1週間の天気と、傘や服装のひとこと">
+<meta name="theme-color" content="#2f80ed">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="loading">
+<div class="sky" aria-hidden="true"></div>
+
+<main class="app">
+  <header class="top">
+    <button class="place-btn" id="placeBtn" type="button" title="場所を変える">
+      <span class="place-name" id="placeName">読みこみ中…</span>
+      <span class="place-sub" id="placeSub"></span>
+    </button>
+    <div class="top-actions">
+      <button class="icon-btn" id="favBtn" type="button" aria-label="お気に入りに追加" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8z"/></svg>
+      </button>
+      <button class="icon-btn" id="refreshBtn" type="button" aria-label="更新">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="line" d="M20 12a8 8 0 1 1-2.6-5.9"/><path class="line" d="M20 4v5h-5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="now" aria-live="polite">
+    <img class="now-icon" id="nowIcon" src="icons/weather/not-available.svg" alt="">
+    <div class="now-main">
+      <div class="now-temp"><span id="nowTemp">--</span><span class="deg">°</span></div>
+      <div class="now-label" id="nowLabel">&nbsp;</div>
+      <div class="now-range" id="nowRange">&nbsp;</div>
+    </div>
+  </section>
+
+  <section class="card advice" id="advice" aria-label="ひとこと"></section>
+
+  <section class="card hourly-card">
+    <h2>1時間ごと</h2>
+    <div class="hourly" id="hourly"></div>
+  </section>
+
+  <section class="card week-card">
+    <h2>1週間</h2>
+    <ol class="week" id="week"></ol>
+  </section>
+
+  <section class="details" id="details" aria-label="くわしい数値"></section>
+
+  <footer class="foot">
+    <span id="updated"></span>
+    <span>天気データ <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></span>
+    <span>アイコン <a href="https://github.com/basmilius/weather-icons" target="_blank" rel="noopener">Meteocons</a></span>
+  </footer>
+</main>
+
+<dialog class="sheet" id="sheet" aria-label="場所をえらぶ">
+  <form class="sheet-head" id="searchForm" role="search">
+    <input id="searchInput" type="search" placeholder="地名で検索(例: 札幌、那覇、パリ)" autocomplete="off" enterkeyhint="search">
+    <button class="text-btn" id="sheetClose" type="button">閉じる</button>
+  </form>
+  <button class="row gps-row" id="gpsBtn" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="line" cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2"/><path class="line" d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    <span>現在地の天気</span>
+  </button>
+  <div id="results" class="list"></div>
+  <h3 class="list-title" id="favTitle">お気に入り</h3>
+  <div id="favList" class="list"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
