@@ -127,6 +127,25 @@
     return res.json();
   }
 
+  // 自信度の計算にくらべる、各国の予報
+  const MODELS = [
+    ['jma_seamless', '気象庁'], ['ecmwf_ifs025', 'ヨーロッパ'], ['gfs_seamless', 'アメリカ'], ['icon_seamless', 'ドイツ'],
+    ['gem_seamless', 'カナダ'], ['meteofrance_seamless', 'フランス'], ['ukmo_seamless', 'イギリス'], ['cma_grapes_global', '中国'],
+  ];
+  async function fetchModels(lat, lon) {
+    const p = new URLSearchParams({
+      latitude: lat.toFixed(4),
+      longitude: lon.toFixed(4),
+      timezone: 'auto',
+      forecast_days: '8',
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum',
+      models: MODELS.map((m) => m[0]).join(','),
+    });
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?' + p);
+    if (!res.ok) throw new Error('models ' + res.status);
+    return res.json();
+  }
+
   const SUFFIXES = ['市', '区', '町', '村', '都', '府', '県'];
   async function searchPlaces(q) {
     // 「札幌」「大阪」のように「市」が無いと見つからない地名があるので、日本語なら語尾をつけた形でもさがす
@@ -173,6 +192,7 @@
   // ---------- 状態 ----------
   let place = null;      // いま表示している場所
   let lastData = null;
+  let lastMulti = null;  // 各国の予報(自信度用)
   let lastAt = 0;
   let loadSeq = 0;
 
@@ -195,19 +215,24 @@
     const cache = store.get('cache', {});
     const hit = cache[placeKey(p)];
     if (hit && seq === loadSeq) {
-      render(hit.data, hit.at);
+      // 古い形の保存データで描けなくても、新しい天気の読みこみは続ける
+      try { render(hit.data, hit.at, hit.multi); } catch { document.body.classList.add('loading'); }
     } else {
       document.body.classList.add('loading');
     }
 
     $('#refreshBtn').classList.add('spin');
     try {
-      const data = await fetchWeather(p.lat, p.lon);
+      // 自信度用のデータは取れなくても、ふつうの天気は出す
+      const [data, multi] = await Promise.all([
+        fetchWeather(p.lat, p.lon),
+        fetchModels(p.lat, p.lon).catch(() => null),
+      ]);
       if (seq !== loadSeq) return;  // 待っている間に別の場所へ切りかわった
       const at = Date.now();
-      render(data, at);
+      render(data, at, multi);
       const next = store.get('cache', {});
-      next[placeKey(p)] = { at, data };
+      next[placeKey(p)] = { at, data, multi };
       // 古いものから捨てて、8か所までにする
       const keys = Object.keys(next).sort((a, b) => next[b].at - next[a].at);
       keys.slice(8).forEach((k) => delete next[k]);
@@ -251,8 +276,9 @@
   }
 
   // ---------- 描画 ----------
-  function render(d, at) {
+  function render(d, at, multi) {
     lastData = d;
+    lastMulti = multi || null;
     lastAt = at;
     const c = d.current;
     const daily = d.daily;
@@ -274,6 +300,7 @@
     renderHourly(d, start);
     renderWeek(d);
     renderDetails(d);
+    renderConfidence(d, lastMulti);
 
     const t = new Date(at);
     $('#updated').textContent = `${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')} 更新`;
@@ -293,12 +320,96 @@
     return j >= 0 ? j : 0;
   }
 
+  // ---------- 自信度 ----------
+  // 各国の予報が「雨が降るか(1日1mm以上)」「最高・最低気温(真ん中の値から±1.5°以内)」で
+  // どれだけそろっているかの割合。雨と気温を半分ずつで合わせる。
+  // 先の日は予報を出していない国があるので、その分は「そろっていない」として数える(分母はいつも8)。
+  const RAIN_MM = 1;
+  const TEMP_TOL = 1.5;
+  const median = (xs) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+
+  function confidence(multi, dayIso) {
+    if (!multi || !multi.daily) return null;
+    const i = multi.daily.time.indexOf(dayIso);
+    if (i < 0) return null;
+    const rows = [];
+    MODELS.forEach(([id, name]) => {
+      const tmax = multi.daily[`temperature_2m_max_${id}`]?.[i];
+      const tmin = multi.daily[`temperature_2m_min_${id}`]?.[i];
+      const rain = multi.daily[`precipitation_sum_${id}`]?.[i];
+      if (tmax == null || tmin == null || rain == null) return;
+      rows.push({ name, tmax, tmin, rain });
+    });
+    const n = rows.length;
+    if (n < 3) return null;  // 3つ未満ではくらべられない
+
+    const rainYes = rows.filter((r) => r.rain >= RAIN_MM).length;
+    const total = MODELS.length;
+    const rainAgree = Math.max(rainYes, n - rainYes) / total;
+    const agree = (key) => {
+      const m = median(rows.map((r) => r[key]));
+      return rows.filter((r) => Math.abs(r[key] - m) <= TEMP_TOL).length / total;
+    };
+    const tempAgree = (agree('tmax') + agree('tmin')) / 2;
+    const maxes = rows.map((r) => r.tmax);
+    return {
+      pct: r0(((rainAgree + tempAgree) / 2) * 100),
+      rainPct: r0(rainAgree * 100),
+      tempPct: r0(tempAgree * 100),
+      n,
+      total,
+      rainYes,
+      maxLo: r0(Math.min(...maxes)),
+      maxHi: r0(Math.max(...maxes)),
+    };
+  }
+
+  // 自信度 → 色(低いとオレンジ、高いと緑)
+  const confColor = (pct) => `hsl(${r0(20 + Math.max(0, pct - 40) * 1.9)}, 85%, 68%)`;
+
+  function renderConfidence(d, multi) {
+    const el = $('#conf');
+    const rows = [];
+    for (let i = 0; i < Math.min(7, d.daily.time.length); i++) {
+      const c = confidence(multi, d.daily.time[i]);
+      if (!c) continue;
+      const dt = dateOf(d.daily.time[i]);
+      const name = i === 0 ? '今日' : i === 1 ? '明日' : `${WEEK[dt.getDay()]}曜`;
+      const rainText = c.rainYes === 0 ? `${c.n}つとも降らない`
+        : c.rainYes === c.n ? `${c.n}つとも降る`
+        : `${c.n}つ中${c.rainYes}つが降る`;
+      const tempText = c.maxLo === c.maxHi ? `${c.maxHi}°` : `${c.maxLo}〜${c.maxHi}°`;
+      const parts = [`雨: ${rainText}`, `最高 ${tempText}`];
+      if (c.n < c.total) parts.push(`予報は${c.n}つだけ`);
+      rows.push(`
+        <li class="conf-row">
+          <span class="day-name">${name}<small>${dt.getMonth() + 1}/${dt.getDate()}</small></span>
+          <span class="conf-pct" style="color:${confColor(c.pct)}">${c.pct}<small>%</small></span>
+          <span class="conf-body">
+            <span class="conf-bar"><i style="width:${c.pct}%;background:${confColor(c.pct)}"></i></span>
+            <span class="conf-detail">${parts.map((t) => `<span>${t}</span>`).join(' ・ ')}</span>
+          </span>
+        </li>`);
+    }
+    if (!rows.length) {
+      el.innerHTML = '<p class="conf-note">いまは自信度を計算できません。各国の予報を読みこめませんでした。</p>';
+      return;
+    }
+    el.innerHTML = `<ol class="conf-list">${rows.join('')}</ol>
+      <p class="conf-note">${MODELS.map((m) => m[1]).join('・')}の予報が、雨と気温についてどれだけそろっているか。予報が近いほど高く、先の日で予報を出していない国があると低くなります。</p>`;
+  }
+
   function renderAdvice(d, start) {
     const h = d.hourly;
     const daily = d.daily;
     const nowHour = hourOf(d.current.time);
     const forTomorrow = nowHour >= 18;
     const di = forTomorrow ? 1 : 0;
+    const conf = confidence(lastMulti, daily.time[di]);
 
     // 対象の時間帯: 今日なら今から12時間、明日なら明日の6時〜21時
     let from, to;
@@ -369,7 +480,7 @@
 
     const umbIcon = maxPop >= 30 || rainingNow ? 'umbrella' : 'clear-day';
     $('#advice').innerHTML = `
-      <div class="advice-when">${forTomorrow ? '明日のひとこと' : '今日のひとこと'}</div>
+      <div class="advice-when">${forTomorrow ? '明日のひとこと' : '今日のひとこと'}${conf ? `<span class="conf-chip" style="--c:${confColor(conf.pct)}">自信度 ${conf.pct}%</span>` : ''}</div>
       <div class="tip">
         <img src="${iconSrc(umbIcon)}" alt="">
         <div><div class="tip-title">${esc(umbTitle)}</div><div class="tip-body">${esc(umbBody)}</div></div>
@@ -613,5 +724,5 @@
   }
 
   // 動作確認用
-  window.__sorayomi = { load, render, searchPlaces, iconOf, themeOf, get data() { return lastData; } };
+  window.__sorayomi = { load, render, searchPlaces, iconOf, themeOf, confidence, get data() { return lastData; }, get multi() { return lastMulti; } };
 })();

@@ -258,6 +258,37 @@ body.loading .app > :not(.top) { opacity: 0.55; }
 .bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.16); position: relative; }
 .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
 
+/* confidence */
+.advice-when { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.conf-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--c);
+  color: var(--c);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(0, 0, 0, 0.12);
+}
+.conf-list { list-style: none; margin: 0; padding: 0; }
+.conf-row {
+  display: grid;
+  grid-template-columns: 4.6em 3.4em minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.conf-row:first-child { border-top: 0; }
+.conf-pct { font-size: 22px; font-weight: 700; line-height: 1; text-align: right; padding-right: 6px; }
+.conf-pct small { font-size: 12px; font-weight: 600; margin-left: 1px; }
+.conf-body { display: grid; gap: 5px; min-width: 0; }
+.conf-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.16); overflow: hidden; }
+.conf-bar i { display: block; height: 100%; border-radius: 3px; }
+.conf-detail { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+.conf-detail span { white-space: nowrap; }
+.conf-note { margin: 10px 0 0; font-size: 11.5px; color: var(--text-3); line-height: 1.6; }
+
 /* details */
 .details {
   display: grid;
@@ -376,7 +407,8 @@ body.loading .app > :not(.top) { opacity: 0.55; }
       "top top"
       "now week"
       "advice week"
-      "hourly details"
+      "hourly conf"
+      "details conf"
       "foot foot";
     align-items: start;
     column-gap: 18px;
@@ -388,5 +420,6 @@ body.loading .app > :not(.top) { opacity: 0.55; }
   .hourly-card { grid-area: hourly; }
   .week-card { grid-area: week; }
   .details { grid-area: details; }
+  .conf-card { grid-area: conf; }
   .foot { grid-area: foot; }
 }
