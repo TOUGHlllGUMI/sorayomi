@@ -128,7 +128,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
   line-height: 0.82;
   letter-spacing: -0.04em;
 }
-.now-temp .deg { font-size: 0.32em; margin: 0.05em 0 0 0.08em; letter-spacing: 0; }
+.now-temp .deg { font-size: 0.3em; margin: 0.04em 0 0 0.06em; letter-spacing: 0; }
 .now-icon {
   width: clamp(100px, 32vw, 128px);
   height: clamp(100px, 32vw, 128px);
@@ -249,7 +249,7 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .day-pop.dim { color: var(--ink-3); }
 .day-range {
   display: grid;
-  grid-template-columns: 2.2em minmax(0, 1fr) 2.2em;
+  grid-template-columns: 2.9em minmax(0, 1fr) 2.9em;
   align-items: center;
   gap: 8px;
   font-size: 15px;

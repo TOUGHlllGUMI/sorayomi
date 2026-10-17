@@ -330,7 +330,7 @@
     $('#nowIcon').alt = labelOf(c.weather_code);
     $('#nowTemp').textContent = r0(c.temperature_2m);
     $('#nowLabel').textContent = labelOf(c.weather_code);
-    $('#nowRange').textContent = `最高 ${r0(daily.temperature_2m_max[0])}° / 最低 ${r0(daily.temperature_2m_min[0])}° ・ 体感 ${r0(c.apparent_temperature)}°`;
+    $('#nowRange').textContent = `最高 ${r0(daily.temperature_2m_max[0])}℃ / 最低 ${r0(daily.temperature_2m_min[0])}℃ ・ 体感 ${r0(c.apparent_temperature)}℃`;
 
     const start = hourIndex(d);
     renderAdvice(d, start);
@@ -359,7 +359,7 @@
   }
 
   // ---------- 自信度 ----------
-  // 各国の予報が「雨が降るか(1日1mm以上)」「最高・最低気温(真ん中の値から±1.5°以内)」で
+  // 各国の予報が「雨が降るか(1日1mm以上)」「最高・最低気温(真ん中の値から±1.5℃以内)」で
   // どれだけそろっているかの割合。雨と気温を半分ずつで合わせる。
   // 先の日は予報を出していない国があるので、その分は「そろっていない」として数える(分母はいつも8)。
   const RAIN_MM = 1;
@@ -420,7 +420,7 @@
       const rainText = c.rainYes === 0 ? `${c.n}つとも降らない`
         : c.rainYes === c.n ? `${c.n}つとも降る`
         : `${c.n}つ中${c.rainYes}つが降る`;
-      const tempText = c.maxLo === c.maxHi ? `${c.maxHi}°` : `${c.maxLo}〜${c.maxHi}°`;
+      const tempText = c.maxLo === c.maxHi ? `${c.maxHi}℃` : `${c.maxLo}〜${c.maxHi}℃`;
       const parts = [`雨: ${rainText}`, `最高 ${tempText}`];
       if (c.n < c.total) parts.push(`予報は${c.n}つだけ`);
       rows.push(`
@@ -506,14 +506,14 @@
     else clothTitle = '厚いコートに、マフラーや手袋も';
 
     const notes = [];
-    if (max - min >= 8) notes.push(`朝と昼の差が ${r0(max - min)}°。脱ぎ着しやすい服がおすすめ。`);
+    if (max - min >= 8) notes.push(`朝と昼の差が ${r0(max - min)}℃。脱ぎ着しやすい服がおすすめ。`);
     if ((daily.uv_index_max[di] ?? 0) >= 6) notes.push('日ざしが強いので、帽子や日焼け止めを。');
     if ((daily.wind_speed_10m_max[di] ?? 0) >= 10) notes.push('風が強いので、傘や自転車に注意。');
     if (!notes.length) {
       if (max >= 27) notes.push('汗をかきやすいので、水分補給を忘れずに。');
       else if (max < 10) notes.push('朝と夜はとくに冷えこみます。');
       else if (max >= 18 && maxPop < 30) notes.push('過ごしやすい一日になりそう。');
-      else notes.push(`日中は ${r0(max)}° くらい。`);
+      else notes.push(`日中は ${r0(max)}℃ くらい。`);
     }
 
     $('#adviceTitle').textContent = forTomorrow ? '明日のひとこと' : '今日のひとこと';
@@ -537,7 +537,7 @@
       const dayTag = day === d.daily.time[1] ? '明日' : `${dateOf(day).getDate()}日`;
       parts.push(`
         <div class="hour${isNow ? ' now-hour' : ''}${newDay ? ' newday' : ''}"${newDay ? ` data-day="${dayTag}"` : ''}>
-          <span class="hour-temp">${r0(h.temperature_2m[i])}°</span>
+          <span class="hour-temp">${r0(h.temperature_2m[i])}℃</span>
           <img src="${iconSrc(iconOf(h.weather_code[i], h.is_day[i] === 1))}" alt="${esc(labelOf(h.weather_code[i]))}" loading="lazy">
           <span class="hour-time">${isNow ? '今' : hr + '時'}</span>
           <span class="hour-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
@@ -583,9 +583,9 @@
           <img src="${iconSrc(iconOf(dl.weather_code[i], true))}" alt="${esc(labelOf(dl.weather_code[i]))}" title="${esc(labelOf(dl.weather_code[i]))}">
           <span class="day-pop${pop < 20 ? ' dim' : ''}">${pop}%</span>
           <span class="day-range">
-            <span class="day-min">${r0(min)}°</span>
+            <span class="day-min">${r0(min)}℃</span>
             <span class="bar"><i style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></i></span>
-            <span class="day-max">${r0(max)}°</span>
+            <span class="day-max">${r0(max)}℃</span>
           </span>
         </li>`);
     }
@@ -601,7 +601,7 @@
     const wind = c.wind_speed_10m;
     const windNote = wind < 2 ? 'ほぼ無風' : wind < 5 ? 'そよ風' : wind < 8 ? 'やや強い' : wind < 11 ? '強い' : 'とても強い';
     const tiles = [
-      { icon: 'thermometer', head: '体感温度', value: `${r0(c.apparent_temperature)}°`,
+      { icon: 'thermometer', head: '体感温度', value: `${r0(c.apparent_temperature)}℃`,
         note: Math.abs(feel) < 1.5 ? '気温とほぼ同じ' : feel > 0 ? '気温より暑く感じる' : '気温より寒く感じる' },
       { icon: 'humidity', head: '湿度', value: `${hum}<small>%</small>`,
         note: hum < 40 ? '乾燥ぎみ' : hum < 70 ? 'ちょうどいい' : 'じめじめ' },
