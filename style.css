@@ -118,7 +118,8 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- いま ---------- */
-.now { padding: 22px 0 22px; border-bottom: 1px solid var(--rule-strong); }
+/* アイコンは右の透明な余白ごと少しはみ出させているので、せまい幅で横スクロールが出ないよう切る */
+.now { padding: 22px 0 22px; border-bottom: 1px solid var(--rule-strong); overflow-x: clip; }
 .now-row { display: flex; align-items: flex-end; justify-content: space-between; }
 .now-temp {
   display: flex;
