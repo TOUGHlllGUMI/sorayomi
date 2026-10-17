@@ -147,17 +147,39 @@
     }));
     const seen = new Map();
     lists.flat().forEach((r) => { if (!seen.has(r.id)) seen.set(r.id, r); });
-    return [...seen.values()]
-      .sort((a, b) => (b.population || 0) - (a.population || 0))
-      .slice(0, 12)
-      .map((r) => ({
-        id: r.id,
-        name: r.name,
-        admin1: r.admin1 && r.admin1 !== r.name ? r.admin1 : '',
-        country: r.country || '',
-        lat: r.latitude,
-        lon: r.longitude,
-      }));
+    // 「新宿」のように同じ名前の地名がたくさんあるので、市区町村まで出して区別する。
+    // 人口の多い順、人口が分からないものは 首都・県庁所在地 → ふつうの町 → 小さな集落 の順。住所まで同じものは1つにまとめる
+    const rank = (r) => {
+      const c = r.feature_code || '';
+      if (c === 'PPLC') return 0;
+      if (c.startsWith('PPLA') || c.startsWith('ADM')) return 1;
+      if (c === 'PPL') return 2;
+      return 3;
+    };
+    const JA = /[぀-ヿ一-鿿]/;
+    const byAddress = new Map();
+    [...seen.values()]
+      // 公園や駅などの施設は外して、町や市などの地名だけにする
+      .filter((r) => !r.feature_code || /^(PPL|ADM)/.test(r.feature_code))
+      .sort((a, b) => (b.population || 0) - (a.population || 0) || rank(a) - rank(b))
+      .forEach((r) => {
+        let parts = [r.admin1, r.admin2, r.admin3]
+          .filter((x, i, arr) => x && x !== r.name && arr.indexOf(x) === i);
+        // 日本語の住所にローマ字(Paris、Fukuoka-shi など)が混ざるときは、ローマ字のほうを外す
+        if (parts.some((x) => JA.test(x))) parts = parts.filter((x) => JA.test(x));
+        const key = [r.name, r.country, ...parts].join('|');
+        if (byAddress.has(key)) return;
+        byAddress.set(key, {
+          id: r.id,
+          name: r.name,
+          admin1: r.admin1 && r.admin1 !== r.name ? r.admin1 : '',
+          area: parts.join(' '),
+          country: r.country || '',
+          lat: r.latitude,
+          lon: r.longitude,
+        });
+      });
+    return [...byAddress.values()].slice(0, 12);
   }
 
   async function reverseName(lat, lon) {
@@ -182,7 +204,7 @@
   let loadSeq = 0;
 
   const placeKey = (p) => `${p.lat.toFixed(2)},${p.lon.toFixed(2)}`;
-  const subText = (p) => [p.gps ? '現在地' : '', p.admin1, p.country && p.country !== '日本' ? p.country : ''].filter(Boolean).join(' ・ ');
+  const subText = (p) => [p.gps ? '現在地' : '', p.area || p.admin1, p.country && p.country !== '日本' ? p.country : ''].filter(Boolean).join(' ・ ');
 
   function showPlace(p) {
     $('#placeName').textContent = p.name;
@@ -591,8 +613,8 @@
       list = list.filter((f) => !sameSpot(f, place));
       toast(`${place.name}をお気に入りから外しました`);
     } else {
-      const { name, admin1, country, lat, lon } = place;
-      list.push({ name, admin1, country, lat, lon });
+      const { name, admin1, area, country, lat, lon } = place;
+      list.push({ name, admin1, area, country, lat, lon });
       toast(`${place.name}をお気に入りに追加しました`);
     }
     store.set('favs', list);
@@ -632,7 +654,7 @@
     }
     el.innerHTML = '<h3 class="list-title">検索結果</h3>' + items.map((p, i) => `
       <button class="row" type="button" data-result="${i}">
-        <div class="row-main"><div class="row-name">${esc(p.name)}</div><div class="row-sub">${esc([p.admin1, p.country !== '日本' ? p.country : ''].filter(Boolean).join(' ・ '))}</div></div>
+        <div class="row-main"><div class="row-name">${esc(p.name)}</div><div class="row-sub">${esc([p.area || p.admin1, p.country !== '日本' ? p.country : ''].filter(Boolean).join(' ・ '))}</div></div>
       </button>`).join('');
     el._items = items;
   }

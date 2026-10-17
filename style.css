@@ -354,8 +354,8 @@ body.loading .app > :not(.top) { opacity: 0.45; }
 .gps-row { font-weight: 700; }
 .gps-row svg { width: 21px; height: 21px; }
 .row-main { flex: 1; min-width: 0; }
-.row-name { font-size: 15.5px; font-weight: 700; }
-.row-sub { font-size: 12.5px; color: var(--ink-2); }
+.row-name { font-size: 15.5px; font-weight: 700; line-height: 1.4; }
+.row-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
 .row-del {
   width: 36px; height: 36px; flex-shrink: 0;
   display: grid; place-items: center;
